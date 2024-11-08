@@ -1,0 +1,19 @@
+# Ignorar la carpeta .vs (configuración de Visual Studio)
+.vs/
+
+# Ignorar los directorios bin/ y obj/ (archivos de compilación)
+bin/
+obj/
+
+# Ignorar archivos específicos de usuario de Visual Studio
+*.user
+*.userosscache
+*.suo
+*.sln.docstates
+
+# Ignorar archivos de configuración del editor (si los tienes)
+.vscode/
+
+# Ignorar archivos de logs y otros archivos temporales
+*.log
+*.vspscc
