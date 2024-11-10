@@ -1,46 +1,83 @@
-﻿using TVShowsAPI.Models;
+﻿using AutoMapper;
+using Microsoft.Extensions.Caching.Memory;
+using TVShowsAPI.DTOs;
+using TVShowsAPI.Models;
 
 namespace TVShowsAPI.Services
 {
     public class TvShowService : ITvShowService
     {
-        private readonly List<TvShow> _tvShows = new();
+        private readonly IMemoryCache _cache;
+        private readonly IMapper _mapper;
+        private const string CacheKey = "TvShowsList";
 
-        public TvShowService()
+        public TvShowService(IMemoryCache cache, IMapper mapper)
         {
-            // Carga de datos iniciales
-            _tvShows.Add(new TvShow { Id = 1, Name = "Breaking Bad", Favorite = true });
-            _tvShows.Add(new TvShow { Id = 2, Name = "Game of Thrones", Favorite = false });
-            _tvShows.Add(new TvShow { Id = 3, Name = "Stranger Things", Favorite = true });
-        }
+            _cache = cache;
+            _mapper = mapper;
 
-        public IEnumerable<TvShow> GetAll() => _tvShows;
-
-        public TvShow GetById(int id) => _tvShows.FirstOrDefault(tv => tv.Id == id);
-
-        public void Add(TvShow tvShow)
-        {
-            tvShow.Id = _tvShows.Max(tv => tv.Id) + 1; 
-            _tvShows.Add(tvShow);
-        }
-
-        public void Update(int id, TvShow tvShow)
-        {
-            var existingTvShow = _tvShows.FirstOrDefault(tv => tv.Id == id);
-            if (existingTvShow != null)
+            if (!_cache.TryGetValue(CacheKey, out List<TvShow> _))
             {
-                existingTvShow.Name = tvShow.Name;
-                existingTvShow.Favorite = tvShow.Favorite;
+                var initialTvShows = new List<TvShow>
+                {
+                    new TvShow { Id = 1, Name = "Breaking Bad", Favorite = true },
+                    new TvShow { Id = 2, Name = "Stranger Things", Favorite = false }
+                };
+                _cache.Set(CacheKey, initialTvShows);
             }
         }
 
-        public void Delete(int id)
+        public List<TvShow> GetAllTvShows() => _cache.Get<List<TvShow>>(CacheKey);
+
+        public TvShow GetTvShowById(int id) => GetAllTvShows().FirstOrDefault(t => t.Id == id);
+
+        public TvShowServiceResult<TvShowDto> AddTvShow(CreateTvShowDto tvShowDto)
         {
-            var tvShow = _tvShows.FirstOrDefault(tv => tv.Id == id);
-            if (tvShow != null)
+            var tvShows = GetAllTvShows();
+
+            if (tvShows.Any(t => t.Name.Equals(tvShowDto.Name, StringComparison.OrdinalIgnoreCase)))
+                return new TvShowServiceResult<TvShowDto>("Este TV show ya está guardado.");
+
+            var newTvShow = new TvShow
             {
-                _tvShows.Remove(tvShow);
-            }
+                Id = tvShows.Any() ? tvShows.Max(t => t.Id) + 1 : 1,
+                Name = tvShowDto.Name,
+                Favorite = tvShowDto.Favorite
+            };
+
+            tvShows.Add(newTvShow);
+            _cache.Set(CacheKey, tvShows);
+
+            return new TvShowServiceResult<TvShowDto>(_mapper.Map<TvShowDto>(newTvShow), "TV show guardado correctamente.");
+        }
+
+        public TvShowServiceResult<string> UpdateTvShow(int id, UpdateTvShowDto tvShowDto)
+        {
+            var tvShows = GetAllTvShows();
+            var existingTvShow = tvShows.FirstOrDefault(t => t.Id == id);
+
+            if (existingTvShow == null)
+                return new TvShowServiceResult<string>("TV show no encontrado para actualizar.");
+
+            existingTvShow.Name = tvShowDto.Name;
+            existingTvShow.Favorite = tvShowDto.Favorite;
+            _cache.Set(CacheKey, tvShows);
+
+            return new TvShowServiceResult<string>(null, "TV show actualizado correctamente.");
+        }
+
+        public TvShowServiceResult<string> DeleteTvShow(int id)
+        {
+            var tvShows = GetAllTvShows();
+            var tvShowToRemove = tvShows.FirstOrDefault(t => t.Id == id);
+
+            if (tvShowToRemove == null)
+                return new TvShowServiceResult<string>("TV show no encontrado para eliminar.");
+
+            tvShows.Remove(tvShowToRemove);
+            _cache.Set(CacheKey, tvShows);
+
+            return new TvShowServiceResult<string>(null, "TV show eliminado correctamente.");
         }
     }
 }
