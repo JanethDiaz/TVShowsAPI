@@ -8,7 +8,7 @@
     {
         public T Data { get; set; }
         public string Message { get; set; } 
-        public bool Success => string.IsNullOrEmpty(Message);
+        public bool Success => !string.IsNullOrEmpty(Message);
 
         public TvShowServiceResult(T data, string message = null)
         {

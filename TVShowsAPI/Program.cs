@@ -3,7 +3,13 @@ using TVShowsAPI.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // Agregar servicios al contenedor.
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Asegúrate de que las propiedades JSON se mapeen a camelCase (opcional)
+        options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+    });
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddMemoryCache();
@@ -15,9 +21,9 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAllOrigins", policy =>
     {
-        policy.AllowAnyOrigin()          
-              .AllowAnyMethod()          
-              .AllowAnyHeader();         
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
     });
 });
 
@@ -31,7 +37,7 @@ if (app.Environment.IsDevelopment())
 }
 
 // Habilitar CORS
-app.UseCors("AllowAllOrigins");  
+app.UseCors("AllowAllOrigins");
 
 app.UseAuthorization();
 app.MapControllers();
